@@ -15,10 +15,10 @@ export class EcsServiceStack extends cdk.Stack {
         const cluster = new ecs.Cluster(this, "Cluster", {
             vpc,
         });
-        
+
         // newing up the role to be made for github actions
         new GitHubOidcRole(this, "GitHubDeployRole", {
-            repo: "jfish1996/infra-repo",    
+            repo: "jfish1996/infra_demo",    
             roleName: "GitHub-ECS-Deploy"
         });
 
