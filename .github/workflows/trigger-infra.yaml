@@ -31,7 +31,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/GitHub-ECS-Deploy
-          aws-region: us-west-2
+          aws-region: us-east-1
 
       - name: Set up Node
         uses: actions/setup-node@v3
