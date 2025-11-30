@@ -1,3 +1,16 @@
+name: CDK ECS Deploy
+
+on:
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types: [app-updated]
+
+env:
+  AWS_ACCOUNT_ID: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+  AWS_REGION: us-east-1
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -7,56 +20,69 @@ jobs:
       contents: read
 
     steps:
+      # -----------------------------------------
+      # 1. CHECK OUT INFRA (THIS REPO)
+      # -----------------------------------------
       - name: Checkout Infra Repo
         uses: actions/checkout@v4
 
+      # -----------------------------------------
+      # 2. AUTH WITH AWS
+      # -----------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/GitHub-ECS-Deploy
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install Infra Dependencies
+      # -----------------------------------------
+      # 3. INSTALL CDK DEPENDENCIES
+      # -----------------------------------------
+      - name: Install CDK Dependencies
         run: npm ci
 
-      # -------------------------
-      # 1. DEPLOY CDK FIRST
-      # -------------------------
-      - name: Deploy CDK (creates ECR repo)
+      # -----------------------------------------
+      # 4. DEPLOY CDK FIRST (CREATES ECR REPO)
+      # -----------------------------------------
+      - name: Deploy CDK
         run: |
           npx cdk deploy --require-approval never
 
-      # -------------------------
-      # 2. NOW CLONE YOUR APP
-      # -------------------------
+      # -----------------------------------------
+      # 5. CHECK OUT NODE APPLICATION
+      # -----------------------------------------
       - name: Checkout Node App Repo
         uses: actions/checkout@v4
         with:
           repository: jfish1996/node_docker_demo
           path: node_app
 
-      - name: Install Node dependencies
+      # -----------------------------------------
+      # 6. INSTALL NODE DEPENDENCIES FOR APP
+      # -----------------------------------------
+      - name: Install App Dependencies
         run: |
           cd node_app
           npm ci
 
-      # -------------------------
-      # 3. LOGIN & PUSH IMAGE
-      # -------------------------
-      - name: Login to ECR
+      # -----------------------------------------
+      # 7. LOGIN TO PRIVATE ECR (NOT PUBLIC)
+      # -----------------------------------------
+      - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # -----------------------------------------
+      # 8. BUILD AND TAG DOCKER IMAGE
+      # -----------------------------------------
       - name: Build Docker Image
         run: |
           docker build -t node-app node_app
           docker tag node-app ${{ steps.login-ecr.outputs.registry }}/node-app:latest
 
+      # -----------------------------------------
+      # 9. PUSH IMAGE TO ECR
+      # -----------------------------------------
       - name: Push Docker Image
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/node-app:latest
