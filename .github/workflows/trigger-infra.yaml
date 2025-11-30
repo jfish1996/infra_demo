@@ -1,15 +1,3 @@
-name: CDK ECS Deploy
-
-on:
-  push:
-    branches:
-      - main
-  repository_dispatch:
-    types: [app-updated]
-
-env:
-  AWS_ACCOUNT_ID: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,11 +9,6 @@ jobs:
     steps:
       - name: Checkout Infra Repo
         uses: actions/checkout@v4
-      - name: Checkout Node App Repo
-        uses: actions/checkout@v4
-        with:
-          repository: jfish1996/node_docker_demo   # <- your Node app repo
-          path: node_app
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -38,27 +21,42 @@ jobs:
         with:
           node-version: 18
 
+      - name: Install Infra Dependencies
+        run: npm ci
+
+      # -------------------------
+      # 1. DEPLOY CDK FIRST
+      # -------------------------
+      - name: Deploy CDK (creates ECR repo)
+        run: |
+          npx cdk deploy --require-approval never
+
+      # -------------------------
+      # 2. NOW CLONE YOUR APP
+      # -------------------------
+      - name: Checkout Node App Repo
+        uses: actions/checkout@v4
+        with:
+          repository: jfish1996/node_docker_demo
+          path: node_app
+
       - name: Install Node dependencies
         run: |
           cd node_app
           npm ci
 
-      - name: Login to Amazon ECR
+      # -------------------------
+      # 3. LOGIN & PUSH IMAGE
+      # -------------------------
+      - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Build Docker image
+
+      - name: Build Docker Image
         run: |
           docker build -t node-app node_app
           docker tag node-app ${{ steps.login-ecr.outputs.registry }}/node-app:latest
 
-      - name: Push Docker image to ECR
+      - name: Push Docker Image
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/node-app:latest
-
-      - name: Set up CDK
-        run: npm ci
-
-      - name: Deploy CDK
-        run: |
-          npx cdk deploy --require-approval never \
-            --context aws_account_id=${{ env.AWS_ACCOUNT_ID }} 
