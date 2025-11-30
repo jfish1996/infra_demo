@@ -46,7 +46,7 @@ jobs:
       # -----------------------------------------
       - name: Deploy CDK
         run: |
-          npx cdk deploy --require-approval never
+          npx cdk deploy --all --require-approval never
 
       # -----------------------------------------
       # 5. CHECK OUT NODE APPLICATION
