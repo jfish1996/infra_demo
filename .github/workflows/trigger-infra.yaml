@@ -1,0 +1,67 @@
+name: CDK ECS Deploy
+
+on:
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types: [app-updated]
+
+env:
+  AWS_ACCOUNT_ID: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Infra Repo
+        uses: actions/checkout@v4
+      - name: Checkout Node App Repo
+        uses: actions/checkout@v4
+        with:
+          repository: jfish1996/node_docker_demo   # <- your Node app repo
+          path: node_app
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/GitHub-ECS-Deploy
+          aws-region: us-west-2
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Node dependencies
+        run: |
+          cd node_app
+          npm ci
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Build Docker image
+        run: |
+          docker build -t demo-node-app node_app
+          docker tag demo-node-app ${{ steps.login-ecr.outputs.registry }}/demo-node-app:latest
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/demo-node-app:latest
+
+      - name: Set up CDK
+        run: npm ci
+
+      - name: Deploy CDK
+        run: |
+          npx cdk deploy --require-approval never \
+            --context aws_account_id=${{ env.AWS_ACCOUNT_ID }} 
