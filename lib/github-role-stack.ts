@@ -16,7 +16,7 @@ export class OidcRoleStack extends cdk.Stack {
         oidcProvider.openIdConnectProviderArn,
         {
           StringLike: {
-            "token.actions.githubusercontent.com:sub": "repo:jjtraut/infra_demo:*",
+            "token.actions.githubusercontent.com:sub": "repo:jfish1996/infra_demo:*",
           },
         },
         "sts:AssumeRoleWithWebIdentity"
