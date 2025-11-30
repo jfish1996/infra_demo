@@ -42,11 +42,18 @@ jobs:
         run: npm ci
 
       # -----------------------------------------
-      # 4. DEPLOY CDK FIRST (CREATES ECR REPO)
+      # 4. DEPLOY OIDC FIRST 
+      # -----------------------------------------
+      - name: Deploy OIDC Stack
+        run: npx cdk deploy OidcRoleStack --require-approval never
+
+
+      # -----------------------------------------
+      # 4. DEPLOY ECS/ECR  
       # -----------------------------------------
       - name: Deploy CDK
         run: |
-          npx cdk deploy --all --require-approval never
+          run: npx cdk deploy EcsNodeService --require-approval never
 
       # -----------------------------------------
       # 5. CHECK OUT NODE APPLICATION
