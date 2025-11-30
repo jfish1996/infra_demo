@@ -48,12 +48,12 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
       - name: Build Docker image
         run: |
-          docker build -t demo-node-app node_app
-          docker tag demo-node-app ${{ steps.login-ecr.outputs.registry }}/demo-node-app:latest
+          docker build -t node-app node_app
+          docker tag node-app ${{ steps.login-ecr.outputs.registry }}/node-app:latest
 
       - name: Push Docker image to ECR
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/demo-node-app:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/node-app:latest
 
       - name: Set up CDK
         run: npm ci
