@@ -8,7 +8,7 @@ const app = new cdk.App();
 new OidcRoleStack(app, "OidcRoleStack", {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: "us-west-2",
+    region: "us-east-1",
   }
 });
 
@@ -16,7 +16,7 @@ new OidcRoleStack(app, "OidcRoleStack", {
 new EcsServiceStack(app, 'EcsNodeService', {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: "us-west-2",
+    region: "us-east-1",
   }
 });
 
