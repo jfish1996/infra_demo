@@ -46,7 +46,7 @@ jobs:
       # -----------------------------------------
       - name: Deploy CDK
         run: |
-          run: npx cdk deploy EcsNodeService --require-approval never
+          npx cdk deploy EcsNodeService --require-approval never
 
       # -----------------------------------------
       # 5. CHECK OUT NODE APPLICATION
