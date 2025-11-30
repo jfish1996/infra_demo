@@ -4,7 +4,6 @@ import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
 import * as ecr from "aws-cdk-lib/aws-ecr";
-import { GitHubOidcRole } from "./oidc-role-stack";
 
 export class EcsServiceStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -16,11 +15,6 @@ export class EcsServiceStack extends cdk.Stack {
             vpc,
         });
 
-        // newing up the role to be made for github actions
-        new GitHubOidcRole(this, "GitHubDeployRole", {
-            repo: "jfish1996/infra_demo",    
-            roleName: "GitHub-ECS-Deploy"
-        });
 
         const repository = new ecr.Repository(this, "Repository", {
             repositoryName: "node-app",
