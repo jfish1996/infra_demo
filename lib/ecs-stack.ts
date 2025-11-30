@@ -31,7 +31,7 @@ export class EcsServiceStack extends cdk.Stack {
                 cpu: 256,
                 memoryLimitMiB: 512,
                 taskImageOptions: {
-                    image: ecs.ContainerImage.fromEcrRepository(repository, "latest"),
+                    image: ecs.ContainerImage.fromEcrRepository(repository),
                     containerPort: 3000,
                 },
             }
