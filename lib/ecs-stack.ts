@@ -5,20 +5,25 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 
+interface EcsServiceStackProps extends cdk.StackProps {
+  repository: ecr.IRepository;
+}
+
 export class EcsServiceStack extends cdk.Stack {
-    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    constructor(scope: Construct, id: string, props: EcsServiceStackProps) {
         super(scope, id, props);
+
+        const { repository } = props;
+
+        const imageTagParam = new cdk.CfnParameter(this, "ImageTag", {
+            default: "latest",
+            description: "Docker image tag to deploy to ECS",
+        });
 
         const vpc = new ec2.Vpc(this, "Vpc", { maxAzs: 2 });
 
         const cluster = new ecs.Cluster(this, "Cluster", {
             vpc,
-        });
-
-
-        const repository = new ecr.Repository(this, "Repository", {
-            repositoryName: "node-app",
-            imageScanOnPush: true,
         });
 
         const service = new ecsPatterns.ApplicationLoadBalancedFargateService(
@@ -31,7 +36,10 @@ export class EcsServiceStack extends cdk.Stack {
                 cpu: 256,
                 memoryLimitMiB: 512,
                 taskImageOptions: {
-                    image: ecs.ContainerImage.fromEcrRepository(repository),
+                    image: ecs.ContainerImage.fromEcrRepository(
+                        repository,
+                        imageTagParam.valueAsString
+                    ),
                     containerPort: 3000,
                 },
             }

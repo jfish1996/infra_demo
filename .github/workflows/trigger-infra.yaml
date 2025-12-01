@@ -9,7 +9,12 @@ on:
 
 env:
   AWS_ACCOUNT_ID: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
-  AWS_REGION: us-east-1
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+  AWS_REGION: us-west-2
+  AWS_DEFAULT_REGION: us-west-2
+  CDK_DEFAULT_REGION: us-west-2
+  DEPLOY_REGION: us-west-2
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   deploy:
@@ -36,15 +41,19 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # -----------------------------------------
-      # 3. ENSURE ECR REPO EXISTS
+      # 3. INSTALL CDK DEPENDENCIES (FIRST PASS)
       # -----------------------------------------
-      - name: Create ECR Repository if needed
-        run: |
-          aws ecr describe-repositories --repository-names node-app || \
-          aws ecr create-repository --repository-name node-app --image-scanning-configuration scanOnPush=true
+      - name: Install CDK Dependencies
+        run: npm ci
 
       # -----------------------------------------
-      # 4. CHECK OUT NODE APPLICATION
+      # 4. DEPLOY ECR REPO (Create Repo if missing)
+      # -----------------------------------------
+      - name: Deploy ECR Stack
+        run: npx cdk deploy EcrStack --require-approval never
+
+      # -----------------------------------------
+      # 5. CHECK OUT NODE APPLICATION
       # -----------------------------------------
       - name: Checkout Node App Repo
         uses: actions/checkout@v4
@@ -53,7 +62,7 @@ jobs:
           path: node_app
 
       # -----------------------------------------
-      # 5. INSTALL NODE DEPENDENCIES FOR APP
+      # 6. INSTALL NODE DEPENDENCIES FOR APP
       # -----------------------------------------
       - name: Install App Dependencies
         run: |
@@ -61,33 +70,26 @@ jobs:
           npm ci
 
       # -----------------------------------------
-      # 6. LOGIN TO PRIVATE ECR
+      # 7. LOGIN TO PRIVATE ECR
       # -----------------------------------------
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       # -----------------------------------------
-      # 7. BUILD AND PUSH DOCKER IMAGE
+      # 8. BUILD AND PUSH DOCKER IMAGE
       # -----------------------------------------
       - name: Build and Push Docker Image
         run: |
-          docker build -t node-app node_app
-          docker tag node-app ${{ steps.login-ecr.outputs.registry }}/node-app:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/node-app:latest
+          docker build -t node-app:${IMAGE_TAG} node_app
+          docker tag node-app:${IMAGE_TAG} ${{ steps.login-ecr.outputs.registry }}/node-app:${IMAGE_TAG}
+          docker push ${{ steps.login-ecr.outputs.registry }}/node-app:${IMAGE_TAG}
 
       # -----------------------------------------
-      # 8. INSTALL CDK DEPENDENCIES
+      # 9. DEPLOY CDK STACK (SERVICE)
       # -----------------------------------------
-      - name: Checkout Infra Repo Again
-        uses: actions/checkout@v4
-
-      - name: Install CDK Dependencies
-        run: npm ci
-
-      # -----------------------------------------
-      # 9. DEPLOY CDK STACK
-      # -----------------------------------------
-      - name: Deploy CDK
+      - name: Deploy ECS Service
         run: |
-          npx cdk deploy EcsNodeService --require-approval never
+          npx cdk deploy EcsNodeService \
+            --require-approval never \
+            --parameters EcsNodeService:ImageTag=${IMAGE_TAG}
